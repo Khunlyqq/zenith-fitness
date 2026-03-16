@@ -4,8 +4,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Use /tmp for writable DB in serverless environments (Netlify)
-const dbPath = process.env.NETLIFY ? '/tmp/zenith.db' : path.join(__dirname, 'zenith.db');
+
+// Improved check for Netlify/Serverless runtime
+const isServerless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.FUNCTIONS_EMULATOR;
+const dbPath = isServerless ? '/tmp/zenith.db' : path.join(__dirname, 'zenith.db');
+
+console.log(`[DB INFO] Environment: ${isServerless ? 'Serverless' : 'Traditional'}`);
+console.log(`[DB INFO] Path: ${dbPath}`);
 
 let db;
 
