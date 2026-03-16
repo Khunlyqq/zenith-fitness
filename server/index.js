@@ -20,70 +20,64 @@ import { authenticate } from './middleware/auth.js';
 import { requireAdmin } from './middleware/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Global middleware
-app.use(cors());
-app.use(express.json());
+// Create and configure Express app
+export function createApp() {
+  const app = express();
 
-// === API Routes ===
+  // Global middleware
+  app.use(cors());
+  app.use(express.json());
 
-// Public
-app.use('/api/auth', authRoutes);
+  // === API Routes ===
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', authenticate, userRoutes);
+  app.use('/api/dashboard', authenticate, dashboardRoutes);
+  app.use('/api/schedules', authenticate, scheduleRoutes);
+  app.use('/api/exercises', authenticate, exerciseRoutes);
+  app.use('/api/workouts', authenticate, workoutRoutes);
+  app.use('/api/stats', authenticate, statsRoutes);
+  app.use('/api/nutrition', authenticate, nutritionRoutes);
+  app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 
-// Protected (require login)
-app.use('/api/users', authenticate, userRoutes);
-app.use('/api/dashboard', authenticate, dashboardRoutes);
-app.use('/api/schedules', authenticate, scheduleRoutes);
-app.use('/api/exercises', authenticate, exerciseRoutes);
-app.use('/api/workouts', authenticate, workoutRoutes);
-app.use('/api/stats', authenticate, statsRoutes);
-app.use('/api/nutrition', authenticate, nutritionRoutes);
-
-// Admin (require login + admin role)
-app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// === Serve Frontend (production) ===
-const distPath = path.join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
-
-// SPA fallback — serve index.html for all non-API routes
-app.get(/^(?!\/api).*/, (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.message);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// Initialize DB then start server
-async function start() {
-  await initDatabase();
-  console.log('✅ Database initialized');
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('╔══════════════════════════════════════════╗');
-    console.log('║        🚀 Zenith Server                  ║');
-    console.log(`║        Running on port ${PORT}              ║`);
-    console.log(`║        http://localhost:${PORT}               ║`);
-    console.log('╚══════════════════════════════════════════╝');
-    console.log('');
-    console.log(`📁 Serving frontend from: ${distPath}`);
-    console.log('📌 API: /api/*');
-    console.log('');
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // Global error handler
+  app.use((err, req, res, next) => {
+    console.error('❌ Error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  });
+
+  return app;
 }
 
-start().catch(err => {
-  console.error('❌ Failed to start server:', err);
-  process.exit(1);
-});
+// Export for serverless usage
+export { initDatabase };
+
+// Start standalone server (only when run directly)
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url).includes(process.argv[1].replace(/\\/g, '/').split('/').pop());
+
+if (isMainModule) {
+  const PORT = process.env.PORT || 3000;
+  const app = createApp();
+  
+  // Serve frontend static files
+  const distPath = path.join(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+
+  initDatabase().then(() => {
+    console.log('✅ Database initialized');
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Zenith Server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('❌ Failed to start:', err);
+    process.exit(1);
+  });
+}
