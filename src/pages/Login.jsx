@@ -85,19 +85,14 @@ function Login() {
       </header>
       
       {/* Main Content: Centered Auth Card */}
-      <main className="flex-grow flex items-center justify-center p-6 bg-gradient-to-tr from-background-dark via-primary/5 to-background-dark">
-        <div className="w-full max-w-md bg-white dark:bg-[#181736] rounded-xl shadow-2xl overflow-hidden border border-slate-200 dark:border-primary/10">
+      <main className="flex-grow flex items-center justify-center p-6 bg-background-dark">
+        <div className="w-full max-w-md bg-white dark:bg-[#181736] rounded-xl shadow-xl overflow-hidden border border-slate-200 dark:border-primary/10">
           
-          {/* Hero Header in Card */}
-          <div className="relative h-32 bg-primary overflow-hidden">
-            <div 
-              className="absolute inset-0 opacity-30 bg-gradient-to-br from-indigo-800 via-purple-700 to-primary" 
-              aria-hidden="true"
-            >
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-[#181736] to-transparent"></div>
+          {/* Header in Card */}
+          <div className="relative h-24 bg-primary overflow-hidden">
+            <div className="absolute inset-0 bg-primary"></div>
             <div className="absolute bottom-4 left-6">
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-xl font-bold text-white">
                 {activeTab === 'login' ? 'Welcome back' : 'Buat Akun Baru'}
               </h1>
               <p className="text-primary-100 dark:text-slate-300 text-sm">

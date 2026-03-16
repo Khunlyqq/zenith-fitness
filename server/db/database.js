@@ -4,7 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, 'zenith.db');
+// Use /tmp for writable DB in serverless environments (Netlify)
+const dbPath = process.env.NETLIFY ? '/tmp/zenith.db' : path.join(__dirname, 'zenith.db');
 
 let db;
 

@@ -13,8 +13,8 @@ const Exercise = lazy(() => import('./pages/Exercise'));
 const Profile = lazy(() => import('./pages/Profile'));
 
 const Loading = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background-dark">
-    <span className="material-symbols-outlined text-4xl animate-spin text-primary" aria-hidden="true">progress_activity</span>
+  <div className="flex items-center justify-center min-h-screen bg-background-dark text-slate-500 text-sm">
+    Loading...
   </div>
 );
 
