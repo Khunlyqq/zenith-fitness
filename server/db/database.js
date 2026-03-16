@@ -125,6 +125,35 @@ export async function initDatabase() {
     );
   `);
 
+  // Automated seeding for first-run
+  const usersCount = db.exec('SELECT COUNT(*) FROM users')[0].values[0][0];
+  if (usersCount === 0) {
+    console.log('🌱 Seeding administrative users and exercises...');
+    const bcrypt = (await import('bcryptjs')).default;
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    const userHash = bcrypt.hashSync('user123', 10);
+
+    db.run(
+      'INSERT INTO users (name, email, password_hash, role, height_cm, weight_kg, active_goal, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ['Admin Zenith', 'admin@zenith.com', adminHash, 'admin', 175, 75, 'Maintenance', 'id']
+    );
+    db.run(
+      'INSERT INTO users (name, email, password_hash, role, height_cm, weight_kg, active_goal, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ['User Test', 'andi@example.com', userHash, 'user', 175, 70, 'Fat Loss', 'id']
+    );
+
+    const exercises = [
+      ['Barbell Bench Press', 'Chest', 'Intermediate'],
+      ['Lat Pulldown', 'Back', 'Beginner'],
+      ['Barbell Squat', 'Legs', 'Advanced'],
+      ['Deadlift', 'Back', 'Advanced'],
+      ['Overhead Press', 'Shoulders', 'Intermediate']
+    ];
+    for (const [name, group, diff] of exercises) {
+      db.run('INSERT INTO exercises (name, muscle_group, difficulty) VALUES (?, ?, ?)', [name, group, diff]);
+    }
+  }
+
   saveDatabase();
   return db;
 }
