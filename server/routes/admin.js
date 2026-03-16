@@ -1,99 +1,169 @@
 import { Router } from 'express';
-import { queryAll, queryOne, runSql, getChanges, getLastInsertId } from '../db/database.js';
+import { supabase } from '../db/database.js';
 
 const router = Router();
 
 // GET /api/admin/users
-router.get('/users', (req, res) => {
-  const users = queryAll('SELECT id, name, email, role, active_goal, language, created_at FROM users ORDER BY created_at DESC');
-  res.json(users);
+router.get('/users', async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, active_goal, language, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(users || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT /api/admin/users/:id
-router.put('/users/:id', (req, res) => {
+router.put('/users/:id', async (req, res) => {
   const { name, email, role, active_goal, language } = req.body;
-  const user = queryOne('SELECT id FROM users WHERE id = ?', [req.params.id]);
-  if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+  const userId = parseInt(req.params.id);
 
-  runSql(`
-    UPDATE users SET
-      name = COALESCE(?, name),
-      email = COALESCE(?, email),
-      role = COALESCE(?, role),
-      active_goal = COALESCE(?, active_goal),
-      language = COALESCE(?, language),
-      updated_at = datetime('now')
-    WHERE id = ?
-  `, [name || null, email || null, role || null, active_goal || null, language || null, parseInt(req.params.id)]);
+  try {
+    const { data: updated, error } = await supabase
+      .from('users')
+      .update({
+        name,
+        email,
+        role,
+        active_goal,
+        language,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select('id, name, email, role, active_goal, language')
+      .single();
 
-  const updated = queryOne('SELECT id, name, email, role, active_goal, language FROM users WHERE id = ?', [parseInt(req.params.id)]);
-  res.json(updated);
+    if (error) return res.status(404).json({ error: 'User tidak ditemukan' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/admin/users/:id
-router.delete('/users/:id', (req, res) => {
-  if (parseInt(req.params.id) === req.user.id) {
+router.delete('/users/:id', async (req, res) => {
+  const userId = parseInt(req.params.id);
+  if (userId === req.user.id) {
     return res.status(400).json({ error: 'Tidak bisa menghapus akun sendiri' });
   }
-  runSql('DELETE FROM users WHERE id = ?', [parseInt(req.params.id)]);
-  if (getChanges() === 0) return res.status(404).json({ error: 'User tidak ditemukan' });
-  res.json({ message: 'User berhasil dihapus' });
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+    if (error) return res.status(404).json({ error: 'User tidak ditemukan' });
+    res.json({ message: 'User berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/admin/exercises
-router.post('/exercises', (req, res) => {
+router.post('/exercises', async (req, res) => {
   const { name, description, muscle_group, difficulty, image_url } = req.body;
   if (!name || !muscle_group) return res.status(400).json({ error: 'Nama dan kelompok otot harus diisi' });
 
-  runSql(
-    'INSERT INTO exercises (name, description, muscle_group, difficulty, image_url) VALUES (?, ?, ?, ?, ?)',
-    [name, description || null, muscle_group, difficulty || 'Intermediate', image_url || null]
-  );
-  const id = getLastInsertId('exercises');
-  const exercise = queryOne('SELECT * FROM exercises WHERE id = ?', [id]);
-  res.status(201).json(exercise);
+  try {
+    const { data: exercise, error } = await supabase
+      .from('exercises')
+      .insert([{
+        name,
+        description,
+        muscle_group,
+        difficulty: difficulty || 'Intermediate',
+        image_url
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(exercise);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT /api/admin/exercises/:id
-router.put('/exercises/:id', (req, res) => {
+router.put('/exercises/:id', async (req, res) => {
   const { name, description, muscle_group, difficulty, image_url } = req.body;
-  runSql(`
-    UPDATE exercises SET
-      name = COALESCE(?, name),
-      description = COALESCE(?, description),
-      muscle_group = COALESCE(?, muscle_group),
-      difficulty = COALESCE(?, difficulty),
-      image_url = COALESCE(?, image_url)
-    WHERE id = ?
-  `, [name || null, description || null, muscle_group || null, difficulty || null, image_url || null, parseInt(req.params.id)]);
+  const exerciseId = parseInt(req.params.id);
 
-  const exercise = queryOne('SELECT * FROM exercises WHERE id = ?', [parseInt(req.params.id)]);
-  if (!exercise) return res.status(404).json({ error: 'Exercise tidak ditemukan' });
-  res.json(exercise);
+  try {
+    const { data: updated, error } = await supabase
+      .from('exercises')
+      .update({
+        name,
+        description,
+        muscle_group,
+        difficulty,
+        image_url
+      })
+      .eq('id', exerciseId)
+      .select()
+      .single();
+
+    if (error) return res.status(404).json({ error: 'Exercise tidak ditemukan' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/admin/exercises/:id
-router.delete('/exercises/:id', (req, res) => {
-  runSql('DELETE FROM exercises WHERE id = ?', [parseInt(req.params.id)]);
-  if (getChanges() === 0) return res.status(404).json({ error: 'Exercise tidak ditemukan' });
-  res.json({ message: 'Exercise berhasil dihapus' });
+router.delete('/exercises/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('exercises')
+      .delete()
+      .eq('id', parseInt(req.params.id));
+    if (error) return res.status(404).json({ error: 'Exercise tidak ditemukan' });
+    res.json({ message: 'Exercise berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/admin/schedules
-router.get('/schedules', (req, res) => {
-  const schedules = queryAll(`
-    SELECT s.*, u.name as user_name FROM schedules s
-    JOIN users u ON s.user_id = u.id
-    ORDER BY s.date DESC
-  `);
-  res.json(schedules);
+router.get('/schedules', async (req, res) => {
+  try {
+    const { data: schedules, error } = await supabase
+      .from('schedules')
+      .select(`
+        *,
+        users (name)
+      `)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    
+    const flattened = schedules.map(s => ({
+      ...s,
+      user_name: s.users?.name
+    }));
+
+    res.json(flattened);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/admin/schedules/:id
-router.delete('/schedules/:id', (req, res) => {
-  runSql('DELETE FROM schedules WHERE id = ?', [parseInt(req.params.id)]);
-  if (getChanges() === 0) return res.status(404).json({ error: 'Schedule tidak ditemukan' });
-  res.json({ message: 'Schedule berhasil dihapus' });
+router.delete('/schedules/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('schedules')
+      .delete()
+      .eq('id', parseInt(req.params.id));
+    if (error) return res.status(404).json({ error: 'Schedule tidak ditemukan' });
+    res.json({ message: 'Schedule berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

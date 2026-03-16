@@ -104,13 +104,13 @@ function Login() {
           {/* Tabs */}
           <div className="flex border-b border-slate-200 dark:border-primary/20">
             <button 
-              className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'login' ? 'border-b-2 border-primary text-primary' : 'text-slate-500 dark:text-slate-400 hover:text-primary'}`}
+              className={`flex-1 py-4 text-sm font-bold ${activeTab === 'login' ? 'border-b-2 border-primary text-primary' : 'text-slate-500 dark:text-slate-400 hover:text-primary'}`}
               onClick={() => { setActiveTab('login'); setError(''); }}
             >
               Login
             </button>
             <button 
-              className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'register' ? 'border-b-2 border-primary text-primary' : 'text-slate-500 dark:text-slate-400 hover:text-primary'}`}
+              className={`flex-1 py-4 text-sm font-bold ${activeTab === 'register' ? 'border-b-2 border-primary text-primary' : 'text-slate-500 dark:text-slate-400 hover:text-primary'}`}
               onClick={() => { setActiveTab('register'); setError(''); }}
             >
               Sign Up
@@ -135,7 +135,7 @@ function Login() {
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" aria-hidden="true">person</span>
                     <input 
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" 
+                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
                       id="name" 
                       placeholder="John Doe" 
                       type="text"
@@ -152,7 +152,7 @@ function Login() {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" aria-hidden="true">mail</span>
                   <input 
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" 
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
                     id="email" 
                     placeholder="name@company.com" 
                     type="email"
@@ -173,7 +173,7 @@ function Login() {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl" aria-hidden="true">lock</span>
                   <input 
-                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" 
+                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-[#100f23] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
                     id="password" 
                     placeholder="••••••••" 
                     type={showPassword ? 'text' : 'password'}
@@ -183,7 +183,7 @@ function Login() {
                   />
                   <button 
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors bg-transparent border-none p-0 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary bg-transparent border-none p-0 cursor-pointer"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
@@ -196,12 +196,12 @@ function Login() {
               
               {/* Submit Button */}
               <button 
-                className={`w-full py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-all shadow-lg shadow-primary/20 transform active:scale-[0.98] flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`w-full py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-lg shadow-primary/20 transform active:scale-[0.98] flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                 type="button"
                 disabled={loading}
                 onClick={activeTab === 'login' ? handleLogin : handleRegister}
               >
-                {loading && <span className="material-symbols-outlined text-lg animate-spin" aria-hidden="true">progress_activity</span>}
+                {loading && <span className="material-symbols-outlined text-lg" aria-hidden="true">progress_activity</span>}
                 {activeTab === 'login' ? 'Sign In' : 'Buat Akun'}
               </button>
             </div>

@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { queryAll, queryOne } from '../db/database.js';
+import { supabase } from '../db/database.js';
 
 const router = Router();
 
 // GET /api/stats/volume?period=1M
-router.get('/volume', (req, res) => {
+router.get('/volume', async (req, res) => {
   const period = req.query.period || '1M';
   let days;
   switch (period) {
@@ -14,21 +14,37 @@ router.get('/volume', (req, res) => {
     default: days = 30;
   }
 
-  const data = queryAll(`
-    SELECT date(started_at) as date, SUM(total_volume_kg) as volume
-    FROM workout_sessions
-    WHERE user_id = ? AND ended_at IS NOT NULL
-    AND started_at >= datetime('now', '-' || ? || ' days')
-    GROUP BY date(started_at)
-    ORDER BY date ASC
-  `, [req.user.id, days]);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
 
-  const totalVolume = data.reduce((sum, d) => sum + (d.volume || 0), 0);
-  res.json({ total_volume: totalVolume, data });
+  try {
+    const { data: sessions, error } = await supabase
+      .from('workout_sessions')
+      .select('started_at, total_volume_kg')
+      .eq('user_id', req.user.id)
+      .not('ended_at', 'is', null)
+      .gte('started_at', startDate.toISOString());
+
+    if (error) throw error;
+
+    // Group by date in JS
+    const grouped = sessions.reduce((acc, s) => {
+      const date = s.started_at.split('T')[0];
+      acc[date] = (acc[date] || 0) + (s.total_volume_kg || 0);
+      return acc;
+    }, {});
+
+    const data = Object.entries(grouped).map(([date, volume]) => ({ date, volume })).sort((a,b) => a.date.localeCompare(b.date));
+    const totalVolume = data.reduce((sum, d) => sum + d.volume, 0);
+
+    res.json({ total_volume: totalVolume, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/stats/body-weight?period=1M
-router.get('/body-weight', (req, res) => {
+router.get('/body-weight', async (req, res) => {
   const period = req.query.period || '1M';
   let days;
   switch (period) {
@@ -38,29 +54,55 @@ router.get('/body-weight', (req, res) => {
     default: days = 30;
   }
 
-  const data = queryAll(`
-    SELECT date, weight_kg, body_fat_pct FROM body_stats
-    WHERE user_id = ? AND date >= date('now', '-' || ? || ' days')
-    ORDER BY date ASC
-  `, [req.user.id, days]);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  const startStr = startDate.toISOString().split('T')[0];
 
-  const latest = data[data.length - 1];
-  const oldest = data[0];
-  const change = latest && oldest ? +(latest.weight_kg - oldest.weight_kg).toFixed(1) : 0;
+  try {
+    const { data, error } = await supabase
+      .from('body_stats')
+      .select('date, weight_kg, body_fat_pct')
+      .eq('user_id', req.user.id)
+      .gte('date', startStr)
+      .order('date', { ascending: true });
 
-  res.json({ latest_weight: latest?.weight_kg || 0, change_kg: change, data });
+    if (error) throw error;
+
+    const latest = data[data.length - 1];
+    const oldest = data[0];
+    const change = latest && oldest ? +(latest.weight_kg - oldest.weight_kg).toFixed(1) : 0;
+
+    res.json({ latest_weight: latest?.weight_kg || 0, change_kg: change, data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/stats/personal-records
-router.get('/personal-records', (req, res) => {
-  const records = queryAll(`
-    SELECT pr.*, e.name as exercise_name, e.muscle_group
-    FROM personal_records pr
-    JOIN exercises e ON pr.exercise_id = e.id
-    WHERE pr.user_id = ?
-    ORDER BY pr.achieved_at DESC
-  `, [req.user.id]);
-  res.json(records);
+router.get('/personal-records', async (req, res) => {
+  try {
+    const { data: records, error } = await supabase
+      .from('personal_records')
+      .select(`
+        *,
+        exercises (name, muscle_group)
+      `)
+      .eq('user_id', req.user.id)
+      .order('achieved_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Flatten the result to match old API
+    const flattened = records.map(r => ({
+      ...r,
+      exercise_name: r.exercises?.name,
+      muscle_group: r.exercises?.muscle_group
+    }));
+
+    res.json(flattened);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

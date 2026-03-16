@@ -18,6 +18,13 @@
 
 body {
     font-family: 'Inter', sans-serif;
+    transition: none !important;
+}
+
+* {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
 }
 
 .material-symbols-outlined {

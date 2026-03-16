@@ -1,39 +1,72 @@
 import { Router } from 'express';
-import { queryOne, runSql } from '../db/database.js';
+import { supabase } from '../db/database.js';
 
 const router = Router();
 
 // GET /api/nutrition/today
-router.get('/today', (req, res) => {
+router.get('/today', async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const nutrition = queryOne('SELECT * FROM nutrition_logs WHERE user_id = ? AND date = ?', [req.user.id, today]);
-  res.json(nutrition || { protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0, water_ml: 0 });
+  try {
+    const { data: nutrition } = await supabase
+      .from('nutrition_logs')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('date', today)
+      .single();
+
+    res.json(nutrition || { protein_g: 0, carbs_g: 0, fat_g: 0, calories: 0, water_ml: 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/nutrition/log
-router.post('/log', (req, res) => {
+router.post('/log', async (req, res) => {
   const { protein_g, carbs_g, fat_g, calories } = req.body;
   const today = new Date().toISOString().split('T')[0];
+  const userId = req.user.id;
 
-  const existing = queryOne('SELECT id FROM nutrition_logs WHERE user_id = ? AND date = ?', [req.user.id, today]);
-  if (existing) {
-    runSql(`
-      UPDATE nutrition_logs SET
-        protein_g = protein_g + COALESCE(?, 0),
-        carbs_g = carbs_g + COALESCE(?, 0),
-        fat_g = fat_g + COALESCE(?, 0),
-        calories = calories + COALESCE(?, 0)
-      WHERE id = ?
-    `, [protein_g || 0, carbs_g || 0, fat_g || 0, calories || 0, existing.id]);
-  } else {
-    runSql(
-      'INSERT INTO nutrition_logs (user_id, date, protein_g, carbs_g, fat_g, calories) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.user.id, today, protein_g || 0, carbs_g || 0, fat_g || 0, calories || 0]
-    );
+  try {
+    const { data: existing } = await supabase
+      .from('nutrition_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .single();
+
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from('nutrition_logs')
+        .update({
+          protein_g: (existing.protein_g || 0) + (protein_g || 0),
+          carbs_g: (existing.carbs_g || 0) + (carbs_g || 0),
+          fat_g: (existing.fat_g || 0) + (fat_g || 0),
+          calories: (existing.calories || 0) + (calories || 0)
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(updated);
+    } else {
+      const { data: inserted, error } = await supabase
+        .from('nutrition_logs')
+        .insert([{
+          user_id: userId,
+          date: today,
+          protein_g: protein_g || 0,
+          carbs_g: carbs_g || 0,
+          fat_g: fat_g || 0,
+          calories: calories || 0
+        }])
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(inserted);
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const updated = queryOne('SELECT * FROM nutrition_logs WHERE user_id = ? AND date = ?', [req.user.id, today]);
-  res.json(updated);
 });
 
 export default router;
