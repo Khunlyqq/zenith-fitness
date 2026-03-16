@@ -58,27 +58,29 @@ export function createApp() {
 // Export for serverless usage
 export { initDatabase };
 
-// Start standalone server (only when run directly)
-const isMainModule = process.argv[1] && fileURLToPath(import.meta.url).includes(process.argv[1].replace(/\\/g, '/').split('/').pop());
+// Start standalone server (only when NOT on Vercel)
+if (!process.env.VERCEL) {
+  const isMainModule = process.argv[1] && fileURLToPath(import.meta.url).includes(process.argv[1].replace(/\\/g, '/').split('/').pop());
 
-if (isMainModule) {
-  const PORT = process.env.PORT || 3000;
-  const app = createApp();
-  
-  // Serve frontend static files
-  const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
-  app.get(/^(?!\/api).*/, (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-
-  initDatabase().then(() => {
-    console.log('✅ Database initialized');
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Zenith Server running on http://localhost:${PORT}`);
+  if (isMainModule) {
+    const PORT = process.env.PORT || 3000;
+    const app = createApp();
+    
+    // Serve frontend static files
+    const distPath = path.join(__dirname, '..', 'dist');
+    app.use(express.static(distPath));
+    app.get(/^(?!\/api).*/, (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
-  }).catch(err => {
-    console.error('❌ Failed to start:', err);
-    process.exit(1);
-  });
+
+    initDatabase().then(() => {
+      console.log('✅ Database initialized');
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Zenith Server running on http://localhost:${PORT}`);
+      });
+    }).catch(err => {
+      console.error('❌ Failed to start:', err);
+      process.exit(1);
+    });
+  }
 }
